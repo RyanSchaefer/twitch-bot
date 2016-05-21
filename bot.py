@@ -1,5 +1,4 @@
 # coding: utf-8
-import parser
 import socket
 import Queue
 import thread
@@ -8,7 +7,6 @@ import time
 import json
 import atexit
 import urllib2
-from time import sleep
 from threading import Timer
 HOST = "irc.twitch.tv"
 PORT = 6667
@@ -25,14 +23,14 @@ class Bot(object):
 		self.r = socket.socket()
 		#socket for whispering
 		self.w = socket.socket()
-		#global work queue (comands are queued here)
+		#global work queue (commands are queued here)
 		self.q = Queue.Queue()
 		self.nick = nick
 		self.pasw = pasw
 		self.chan = chan
 		self.commands = {}
 		self.chatlog = []
-		#{username: {currency:0, is_online:True or False}} done this way so that users can add custom attributs to the user dictonary
+		#{username: {currency:0, is_online:True or False, is_mod: True or False}} done this way so that users can add custom attributs to the user dictonary
 		self.users = {}
 		self.timers = {}
 		self.threads_alive = True
@@ -68,7 +66,7 @@ class Bot(object):
 					break
 				except:
 					pass
-		thread.start_new_thread(command_thread(self, command, mess))
+		thread.start_new_thread(command_thread, (self, command, mess))
 	#start processing queued commands 
 	def start_working(self):
 		def worker(self):
@@ -93,7 +91,7 @@ class Bot(object):
 					username = mess.split("@")[0].split("!")[1]
 					mess = mess.split("PRIVMSG #%s :" % (self.chan))[1].split("\r\n")[0]
 					if username != self.nick and "GLHF" not in mess and "GLHF" not in username:
-						self.chatlog.append([username, mess])
+						self.chatlog.append({"username": username, "message": mess})
 				except:
 					if "PING" in mess:
 						self.s.send("PONG :tmi.twitch.tv\r\n")
@@ -105,11 +103,11 @@ class Bot(object):
 				try:
 					for key in self.commands.keys():
 						#makes sure only one command per chat
-							if key in self.chatlog[0][1]:
+							if key in self.chatlog[0]["message"]:
 								self.command(self.commands[key], self.chatlog[0])
 								self.chatlog.remove(self.chatlog[0])
 							#keeps track of all commands checked
-							if key not in self.chatlog[0][1]:
+							if key not in self.chatlog[0]["message"]:
 								checked.append(key)
 							#if no chat commands were found in chatlog, remove it
 							if sorted(checked) == sorted(self.commands.keys()):
@@ -152,12 +150,7 @@ class command(object):
 	def __init__(self):
 		self.keyword = "!test"
 	def action(self, mess, botself):
-		pass
-class command(object):
-	def __init__(self):
-		self.keyword = "!give "
-	def action(self, mess, botself):
-		pass
+		print "Worked"
 class get_new_users(object):
 	def __init__(self):
 		self.bot = None
@@ -198,10 +191,11 @@ mr = Bot(NICK, PASS, CHAN)
 mr.connect(HOST, PORT)
 mr.add_timer(get_new_users, ())
 mr.add_timer(handout_currency, (1,10))
+mr.add_command(command())
 mr.start_bot()
-mr.whisper("drowsysquid75", "test")
 x = ""
 while x == "":
 	x = raw_input()
 mr.threads_alive = False
 print mr.users
+print mr.chatlog
