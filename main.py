@@ -8,14 +8,16 @@ import json
 import urllib2
 import pickle
 import os
+import random
+import atexit
 from threading import Timer
 HOST = "irc.twitch.tv"
 PORT = 6667
-WHOST = "chatdepot.twitch.tv"
+WHOST = "irc.chat.twitch.tv"
 WPORT = 6667
 NICK = "squid_coin_bot"
 PASS = "oauth:oju0t5n0yo3cia31ohaz8w9uqv35b2"
-CHAN = "reckful"
+CHAN = "drowsysquid75"
 currency_name = "SquidBux"
 class Bot(object):
 	def __init__(self, nick, pasw, chan):
@@ -26,6 +28,7 @@ class Bot(object):
 		#socket for whispering
 		self.w = socket.socket()
 		#global work queue (commands are queued here)
+		self.wr = socket.socket()
 		self.q = Queue.Queue()
 		self.nick = nick
 		self.pasw = pasw
@@ -37,6 +40,7 @@ class Bot(object):
 		self.timers = {}
 		self.storage = {}
 		self.threads_alive = True
+		self.whisper_log = []
 	def chat(self, msg):
 		#send a chat message using the sending socket
 		self.s.send("PRIVMSG #%s : %s\r\n" %(self.chan, msg))
@@ -57,8 +61,14 @@ class Bot(object):
 		self.w.connect((host, port))
 		self.w.send("PASS %s\r\n" %self.pasw)
 		self.w.send("NICK %s\r\n" %self.nick)
-		self.w.send("JOIN #%s\r\n" %self.chan)
+		self.w.send("JOIN #jtv\r\n")
 		self.w.send("CAP REQ :twitch.tv/commands\r\n")
+		#and the one for recieving
+		self.wr.connect((WHOST, WPORT))
+		self.wr.send("PASS %s\r\n" %self.pasw)
+		self.wr.send("NICK %s\r\n" %self.nick)
+		self.wr.send("JOIN #jtv\r\n")
+		self.wr.send("CAP REQ :twitch.tv/commands\r\n")
 		print "connected"
 	#commands must run without fail so they tried until they can be appended to the queue
 	def command(self, command, mess):
@@ -90,11 +100,26 @@ class Bot(object):
 			while self.threads_alive:
 				try:
 					mess = self.r.recv(2048)
-					print mess
 					username = mess.split("@")[0].split("!")[1]
 					mess = mess.split("PRIVMSG #%s :" % (self.chan))[1].split("\r\n")[0]
+					print username +" : "+ mess
 					if username != self.nick and "GLHF" not in mess and "GLHF" not in username:
 						self.chatlog.append({"username": username, "message": mess})
+				except:
+					if "PING" in mess:
+						self.s.send("PONG :tmi.twitch.tv\r\n")
+		thread.start_new_thread(reciever, (self,))
+	def start_recieving_whispers(self):
+		def reciever(self):
+			while self.threads_alive:
+				try:
+					mess = self.wr.recv(2048)
+					print mess
+					username = mess.split("@")[0].split("!")[1]
+					mess = mess.split("WHISPER %s :" % (self.nick))[1].split("\r\n")[0]
+					print "whisper:  "+username +" : "+ mess
+					if username != self.nick and "GLHF" not in mess and "GLHF" not in username:
+						self.whisper_log.append({"username": username, "message": mess})
 				except:
 					if "PING" in mess:
 						self.s.send("PONG :tmi.twitch.tv\r\n")
@@ -131,6 +156,7 @@ class Bot(object):
 			for file in os.listdir("mods"):
 				exec(open(os.path.join("mods", file), 'r').read())
 		except:
+			traceback.print_exc()
 			os.mkdir("mods")
 	def load_save(self):
 		try:
@@ -141,11 +167,13 @@ class Bot(object):
 			pass
 	def start_bot(self):
 		self.load_save()
+		self.load_mods()
 		self.start_working()
 		self.start_recieving()
+		self.start_recieving_whispers()
 		self.start_detection()
 		self.start_timers()
-		self.load_mods()
+		self.chat("Squid_Coin_Bot has joined the channel!")
 """
 How to implement a command
 class command(object):
@@ -167,8 +195,12 @@ class timer(object):
 			thread.start_new_thread(timer.run, ())
 """
 bot = Bot(NICK, PASS, CHAN)
-#bot.connect(HOST, PORT)
+bot.connect(HOST, PORT)
 bot.start_bot()
+def this():
+	bot.threads_alive = False
+	bot.chat("Squid_Coin_Bot parting...")
+atexit.register(this)
 x = ""
 while x == "":
 	x = raw_input()
