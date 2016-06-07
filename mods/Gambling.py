@@ -15,19 +15,19 @@ class gambling_slots(object):
 		self.xhundred = "PogChamp"
 		for x in range(1000):
 			self.odds.append(self.zero)
-		for x in range(500):
+		for x in range(100):
 			self.odds.append(self.xhalf)
-		for x in range(250):
+		for x in range(25):
 			self.odds.append(self.xone)
-		for x in range(125):
+		for x in range(15):
 			self.odds.append(self.xtwo)
-		for x in range(62):
+		for x in range(10):
 			self.odds.append(self.xthree)
-		for x in range(31):
+		for x in range(5):
 			self.odds.append(self.xfive)
-		for x in range(16):
+		for x in range(3):
 			self.odds.append(self.xten)
-		for x in range(8):
+		for x in range(1):
 			self.odds.append(self.xhundred)
 	def action(self, mess, bot):
 		try:
@@ -211,7 +211,6 @@ class gambling_roulette(object):
 					bot.storage["gambling_roulette"]["bets"][username]["numbers"] = valid_numbers
 		except:
 			traceback.print_exc()
-
 
 bot.add_command(gambling_slots())
 bot.add_command(gambling_jackpot())
