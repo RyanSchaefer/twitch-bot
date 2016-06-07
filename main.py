@@ -173,7 +173,7 @@ class Bot(object):
 		self.start_recieving_whispers()
 		self.start_detection()
 		self.start_timers()
-		self.chat("Squid_Coin_Bot has joined the channel!")
+		self.chat("Squid_Coin_Bot has joined the channel! We are currently testing !bet")
 """
 How to implement a command
 class command(object):
